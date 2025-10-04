@@ -48,6 +48,15 @@ function Dashboard() {
         window.location.href = '/auth/signin';
     };
 
+    const extractName = (userMail) => {
+        if (!userMail) return 'User';
+        const namePart = userMail.split('@')[0];
+        return namePart
+            .split('.')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
     // Handle logout
     const handleLogout = async () => {
         // Clear localStorage
@@ -381,7 +390,7 @@ function Dashboard() {
                                     <div className="text-center mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 sm:p-6 border border-blue-100">
                                         <p className="text-sm sm:text-lg font-semibold text-gray-600 mb-1 sm:mb-2">CURRENTLY SERVING</p>
                                         <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-blue-600 mb-1 sm:mb-2 break-words">
-                                            {currentlyServing}
+                                            {extractName(currentlyServing)}
                                         </p>
                                     </div>
 
@@ -396,7 +405,7 @@ function Dashboard() {
                                         <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-100 text-center">
                                             <p className="text-xs sm:text-sm font-semibold text-green-700 mb-1">NEXT IN LINE</p>
                                             <p className="text-lg sm:text-xl font-bold text-green-600 break-words">
-                                                {nextInLine}
+                                                {extractName(nextInLine)}
                                             </p>
                                         </div>
                                     </div>
@@ -446,7 +455,7 @@ function Dashboard() {
                                             <div className="flex-1 bg-gray-100 border-2 border-gray-200 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg flex items-center justify-center space-x-2 text-sm sm:text-base">
                                                 <LogIn className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
                                                 <span className="font-medium text-gray-600">
-                                                    Login to interact with queue
+                                                    Login to queue
                                                 </span>
                                             </div>
                                         ) : isAdmin ? (
