@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, AlertCircle, Plus, SkipForward, Ticket, Trash2, LogOut, User, X } from 'lucide-react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AuthWrapper from '../components/AuthWrapper';
 import CreateQueueModal from '../components/CreateQueueModal';
 
 export default function Home() {
-    const router = useRouter();
     const [user, setUser] = useState(null);
     const [queues, setQueues] = useState([]);
     const [loading, setLoading] = useState(false);
