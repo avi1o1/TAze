@@ -121,38 +121,6 @@ export default function CreateQueueModal({ isOpen, onClose, onQueueCreated }) {
                                 placeholder="Brief description of this queue..."
                             />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                            <div>
-                                <label htmlFor="currentTurn" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                                    Current Turn
-                                </label>
-                                <input
-                                    type="number"
-                                    id="currentTurn"
-                                    name="currentTurn"
-                                    min="0"
-                                    value={formData.currentTurn}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label htmlFor="nextTicket" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                                    Next Ticket
-                                </label>
-                                <input
-                                    type="number"
-                                    id="nextTicket"
-                                    name="nextTicket"
-                                    min="1"
-                                    value={formData.nextTicket}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-                        </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">

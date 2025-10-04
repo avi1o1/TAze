@@ -1,23 +1,24 @@
 # TAze Queue Management System
 
-A modern queue management system built with Next.js and MongoDB for efficient ticket-based queue handling, secured with CAS authentication.
+A modern queue management system built with Next.js and MongoDB for efficient name-based queue handling, secured with CAS authentication.
 
 ## Features
 
 - 🔐 **CAS Authentication** - Secure login via IIIT CAS (login.iiit.ac.in)
-- 🎫 **Digital Ticket System** - Issue and manage numbered tickets
-- ⏭️ **Real-time Queue Management** - Track current serving numbers
-- 📊 **Visual Progress Indicators** - See queue status at a glance
+- 👥 **Name-based Queue System** - Users join queues with their authenticated names
+- ⏭️ **Real-time Queue Management** - Track who's currently being served
+- � **Visual Queue Display** - See the full queue with numbered positions
 - 🔄 **Auto-refresh** - Real-time updates every 15 seconds
 - 📱 **Responsive Design** - Works on desktop and mobile devices
 - 🗄️ **MongoDB Integration** - Persistent data storage
-- 👤 **User Management** - Track queue creators and user sessions
+- 👤 **User Management** - Prevent duplicate queue entries per user
 
 ## Security Features
 
 - **CAS Integration** - Authentication via IIIT CAS server
 - **Protected Routes** - All features require authentication
 - **Token-based Security** - Secure API access with time-limited tokens
+- **User Validation** - Prevent users from joining the same queue multiple times
 - **Automatic Logout** - Session expiry and CAS logout support
 
 ## Tech Stack
@@ -66,10 +67,7 @@ A modern queue management system built with Next.js and MongoDB for efficient ti
    MONGODB_URI=mongodb://localhost:27017/taze-queue-system
    ```
 
-4. **Seed the database with sample data** (optional)
-   Once the app is running, visit `http://localhost:3000/api/seed` to create sample queues.
-
-5. **Run the development server**
+4. **Run the development server**
    ```bash
    npm run dev
    ```
@@ -87,19 +85,15 @@ A modern queue management system built with Next.js and MongoDB for efficient ti
 - `DELETE /api/queues/[id]` - Delete a queue
 
 ### Queue Actions
-- `PUT /api/queues/[id]/next-turn` - Advance to next customer
-- `PUT /api/queues/[id]/new-ticket` - Issue a new ticket
-
-### Utility
-- `POST /api/seed` - Create sample queue data
-
+- `PUT /api/queues/[id]/next-turn` - Call the next person in queue
+- `PUT /api/queues/[id]/new-ticket` - Join the queue
 ## Data Model
 
 Each queue contains:
 - `title` - Queue name
 - `description` - Queue description
-- `nextTicket` - Next ticket number to be issued
-- `currentTurn` - Currently serving ticket number
+- `ticketQueue` - Array of user names in the queue
+- `currentlyServing` - Name of the person currently being served
 - `timestamps` - Created and updated timestamps
 
 ## Deployment
@@ -144,8 +138,7 @@ The app can be deployed to any platform that supports Next.js:
 │   │   │   │   ├── next-turn.js
 │   │   │   │   └── new-ticket.js
 │   │   │   └── [id].js
-│   │   ├── queues.js
-│   │   └── seed.js
+│   │   └── queues.js
 │   ├── _app.js
 │   ├── _document.js
 │   └── index.js

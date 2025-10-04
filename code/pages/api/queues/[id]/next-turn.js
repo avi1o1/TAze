@@ -15,21 +15,32 @@ async function handler(req, res) {
     }
 
     try {
+        // Check if user is admin
+        const adminEmails = process.env.ADMINS?.split(',').map(email => email.trim()) || [];
+        const userEmail = req.user.email;
+        const isAdmin = adminEmails.includes(userEmail);
+
+        if (!isAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can advance the queue'
+            });
+        }
+
         const queue = await Queue.findById(id);
         if (!queue) {
             return res.status(404).json({ success: false, message: 'Queue not found' });
         }
 
-        // Check if we can increment currentTurn (shouldn't exceed nextTicket - 1)
-        if (queue.currentTurn >= queue.nextTicket - 1) {
-            return res.status(400).json({
-                success: false,
-                message: 'Cannot advance turn. No more tickets available.'
-            });
+        // If there are people in the queue, move the first person to currentlyServing
+        if (queue.ticketQueue.length > 0) {
+            const nextPerson = queue.ticketQueue.shift(); // Remove first element
+            queue.currentlyServing = nextPerson;
+        } else {
+            // If no one is waiting, clear the currentlyServing field
+            queue.currentlyServing = null;
         }
 
-        // Increment currentTurn
-        queue.currentTurn += 1;
         await queue.save();
 
         res.status(200).json({ success: true, data: queue });

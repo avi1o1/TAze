@@ -23,19 +23,24 @@ async function handler(req, res) {
         // Get user name from the authenticated request
         const userName = req.user.name;
 
-        // Check if user is already in the queue
-        if (queue.ticketQueue.includes(userName)) {
+        // Check if user is in the queue
+        const userIndex = queue.ticketQueue.indexOf(userName);
+        if (userIndex === -1) {
             return res.status(400).json({
                 success: false,
-                message: 'You are already in the queue'
+                message: 'You are not in this queue'
             });
         }
 
-        // Add user to the ticket queue
-        queue.ticketQueue.push(userName);
+        // Remove user from the ticket queue
+        queue.ticketQueue.splice(userIndex, 1);
         await queue.save();
 
-        res.status(200).json({ success: true, data: queue });
+        res.status(200).json({
+            success: true,
+            data: queue,
+            message: 'Successfully left the queue'
+        });
     } catch (error) {
         res.status(400).json({ success: false, error: error.message });
     }

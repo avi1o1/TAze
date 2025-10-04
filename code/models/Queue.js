@@ -10,15 +10,13 @@ const QueueSchema = new mongoose.Schema({
         type: String,
         default: 'No description'
     },
-    nextTicket: {
-        type: Number,
-        required: true,
-        default: 1
+    ticketQueue: {
+        type: [String],
+        default: []
     },
-    currentTurn: {
-        type: Number,
-        required: true,
-        default: 0
+    currentlyServing: {
+        type: String,
+        default: ''
     },
     createdBy: {
         type: String,
