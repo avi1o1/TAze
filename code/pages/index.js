@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, AlertCircle, Plus, SkipForward, Ticket, Trash2, LogOut, User, X } from 'lucide-react';
+import { RefreshCw, AlertCircle, Plus, SkipForward, Ticket, Trash2, LogOut, User, X, LogIn } from 'lucide-react';
 import Head from 'next/head';
-import AuthWrapper from '../components/AuthWrapper';
+import AuthWrapper, { useAuth } from '../components/AuthWrapper';
 import CreateQueueModal from '../components/CreateQueueModal';
 
-export default function Home() {
-    const [user, setUser] = useState(null);
+function Dashboard() {
+    const { isAuthenticated, user } = useAuth();
     const [queues, setQueues] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -15,6 +15,11 @@ export default function Home() {
 
     // Check if current user is admin
     const checkAdminStatus = async () => {
+        if (!isAuthenticated) {
+            setIsAdmin(false);
+            return;
+        }
+
         try {
             const authToken = localStorage.getItem('cas_auth_token');
             const response = await fetch('/api/auth/status', {
@@ -33,18 +38,15 @@ export default function Home() {
         }
     };
 
-    // Get user from localStorage
+    // Check admin status when authentication changes
     useEffect(() => {
-        const authUser = localStorage.getItem('cas_auth_user');
-        const authEmail = localStorage.getItem('cas_auth_email');
-        if (authUser) {
-            setUser({
-                name: authUser,
-                email: authEmail
-            });
-        }
         checkAdminStatus();
-    }, []);
+    }, [isAuthenticated]);
+
+    // Handle login redirect
+    const handleLogin = () => {
+        window.location.href = '/auth/signin';
+    };
 
     // Handle logout
     const handleLogout = async () => {
@@ -54,8 +56,8 @@ export default function Home() {
         localStorage.removeItem('cas_auth_email');
         localStorage.removeItem('cas_auth_timestamp');
 
-        // Redirect to CAS logout then to signin
-        window.location.href = 'https://login.iiit.ac.in/cas/logout?service=' + encodeURIComponent(window.location.origin + '/auth/signin');
+        // Redirect to CAS logout then back to dashboard
+        window.location.href = 'https://login.iiit.ac.in/cas/logout?service=' + encodeURIComponent(window.location.origin);
     };
 
     // Load data from MongoDB via API
@@ -64,20 +66,32 @@ export default function Home() {
         setError('');
 
         try {
-            const authToken = localStorage.getItem('cas_auth_token');
-            const response = await fetch('/api/queues', {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
+            let response;
 
-            if (!response.ok) {
-                if (response.status === 401) {
-                    // Token expired, redirect to login
-                    handleLogout();
-                    return;
+            if (isAuthenticated) {
+                // Use authenticated API endpoint
+                const authToken = localStorage.getItem('cas_auth_token');
+                response = await fetch('/api/queues', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Token expired, redirect to login
+                        handleLogout();
+                        return;
+                    }
+                    throw new Error('Failed to fetch queues from database');
                 }
-                throw new Error('Failed to fetch queues from database');
+            } else {
+                // Use public API endpoint for unauthenticated users
+                response = await fetch('/api/queues/public');
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch queues from database');
+                }
             }
 
             const result = await response.json();
@@ -93,10 +107,12 @@ export default function Home() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isAuthenticated]);
 
-    // Handle next turn action
+    // Handle next turn action (admin only, authenticated users only)
     const handleNextTurn = async (queueId) => {
+        if (!isAuthenticated || !isAdmin) return;
+
         try {
             const authToken = localStorage.getItem('cas_auth_token');
             const response = await fetch(`/api/queues/${queueId}/next-turn`, {
@@ -121,8 +137,10 @@ export default function Home() {
         }
     };
 
-    // Handle new ticket action
+    // Handle new ticket action (authenticated users only)
     const handleNewTicket = async (queueId) => {
+        if (!isAuthenticated) return;
+
         try {
             const authToken = localStorage.getItem('cas_auth_token');
             const response = await fetch(`/api/queues/${queueId}/new-ticket`, {
@@ -147,8 +165,10 @@ export default function Home() {
         }
     };
 
-    // Handle leave queue action
+    // Handle leave queue action (authenticated users only)
     const handleLeaveQueue = async (queueId) => {
+        if (!isAuthenticated) return;
+
         try {
             const authToken = localStorage.getItem('cas_auth_token');
             const response = await fetch(`/api/queues/${queueId}/leave-queue`, {
@@ -174,8 +194,10 @@ export default function Home() {
         }
     };
 
-    // Handle delete queue action
+    // Handle delete queue action (admin only, authenticated users only)
     const handleDeleteQueue = async (queueId, queueTitle) => {
+        if (!isAuthenticated || !isAdmin) return;
+
         if (!confirm(`Are you sure you want to delete the queue "${queueTitle}"? This action cannot be undone.`)) {
             return;
         }
@@ -219,7 +241,7 @@ export default function Home() {
     }, [loadQueues]);
 
     return (
-        <AuthWrapper>
+        <div>
             <Head>
                 <title>TAze</title>
                 <meta name="description" content="Effortless Queue Management System" />
@@ -236,29 +258,67 @@ export default function Home() {
                             <p className="text-base sm:text-lg text-gray-700">Queue Management System</p>
                         </div>
 
-                        {/* User Info and Logout */}
+                        {/* User Info and Login/Logout */}
                         <div className="flex justify-between space-x-2 sm:space-x-4 bg-white rounded-lg shadow-md p-2 sm:p-3">
-                            <div className="flex items-center space-x-1 sm:space-x-2">
-                                <User className="w-5 h-5text-gray-600" />
-                                <div className="flex flex-col">
-                                    <span className="text-xs sm:text-sm font-medium text-gray-700 max-w-20 sm:max-w-none">
-                                        {user?.name || user?.email || 'User'}
-                                    </span>
-                                    {isAdmin && (
-                                        <span className="text-xs text-blue-600 font-semibold">Admin</span>
-                                    )}
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleLogout}
-                                className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition"
-                                title="Logout"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                <span>Logout</span>
-                            </button>
+                            {isAuthenticated ? (
+                                <>
+                                    <div className="flex items-center space-x-1 sm:space-x-2">
+                                        <User className="w-5 h-5 text-gray-600" />
+                                        <div className="flex flex-col">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-700 max-w-20 sm:max-w-none">
+                                                {user?.name || user?.email || 'User'}
+                                            </span>
+                                            {isAdmin && (
+                                                <span className="text-xs text-blue-600 font-semibold">Admin</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="flex items-center space-x-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition"
+                                        title="Logout"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        <span>Logout</span>
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex items-center space-x-1 sm:space-x-2">
+                                        <User className="w-5 h-5 text-gray-600" />
+                                        <span className="text-xs sm:text-sm font-medium text-gray-700">
+                                            Guest User
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={handleLogin}
+                                        className="flex items-center space-x-1 bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition"
+                                        title="Login to interact with queues"
+                                    >
+                                        <LogIn className="w-4 h-4" />
+                                        <span>Login</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
+
+                    {/* Guest Notice for unauthenticated users */}
+                    {!isAuthenticated && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                            <div className="flex items-center space-x-2">
+                                <LogIn className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                                <div>
+                                    <p className="text-blue-800 font-medium text-sm sm:text-base">
+                                        You're viewing as a guest
+                                    </p>
+                                    <p className="text-blue-700 text-xs sm:text-sm mt-1">
+                                        Login to join queues and interact with the system
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Error Alert */}
                     {error && (
@@ -305,7 +365,7 @@ export default function Home() {
                                     {/* Header: Title + Delete Button */}
                                     <div className="flex justify-between items-start sm:items-center mb-4 sm:mb-6">
                                         <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 leading-tight">{queue.title}</h2>
-                                        {isAdmin && (
+                                        {isAuthenticated && isAdmin && (
                                             <button
                                                 onClick={() => handleDeleteQueue(queue._id, queue.title)}
                                                 disabled={loading}
@@ -381,7 +441,15 @@ export default function Home() {
 
                                     {/* Action Buttons */}
                                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-                                        {isAdmin ? (
+                                        {!isAuthenticated ? (
+                                            // Unauthenticated view: Show login prompt
+                                            <div className="flex-1 bg-gray-100 border-2 border-gray-200 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg flex items-center justify-center space-x-2 text-sm sm:text-base">
+                                                <LogIn className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                                                <span className="font-medium text-gray-600">
+                                                    Login to interact with queue
+                                                </span>
+                                            </div>
+                                        ) : isAdmin ? (
                                             // Admin view: Only show Next Turn button
                                             <button
                                                 onClick={() => handleNextTurn(queue._id)}
@@ -396,7 +464,7 @@ export default function Home() {
                                                 <span>{waitingCount > 0 ? 'Next Turn' : 'Finish Serving'}</span>
                                             </button>
                                         ) : (
-                                            // Non-admin view: Show Join/Leave queue buttons
+                                            // Non-admin authenticated view: Show Join/Leave queue buttons
                                             (() => {
                                                 const userInQueue = queue.ticketQueue && queue.ticketQueue.includes(user?.name);
                                                 const userPosition = userInQueue ? queue.ticketQueue.indexOf(user?.name) + 1 : null;
@@ -450,9 +518,9 @@ export default function Home() {
                             </div>
                             <h3 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">No Queues Found</h3>
                             <p className="text-sm sm:text-base text-gray-500 mb-4 px-4">
-                                {isAdmin ? 'Get started by creating your first queue.' : 'No queues are currently available.'}
+                                {isAuthenticated && isAdmin ? 'Get started by creating your first queue.' : 'No queues are currently available.'}
                             </p>
-                            {isAdmin && (
+                            {isAuthenticated && isAdmin && (
                                 <button
                                     onClick={() => setShowCreateModal(true)}
                                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-md text-sm sm:text-base font-semibold transition"
@@ -463,8 +531,8 @@ export default function Home() {
                         </div>
                     )}
 
-                    {/* Floating Action Button */}
-                    {queues.length > 0 && isAdmin && (
+                    {/* Floating Action Button - Only for authenticated admins */}
+                    {queues.length > 0 && isAuthenticated && isAdmin && (
                         <button
                             onClick={() => setShowCreateModal(true)}
                             className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg flex items-center justify-center transition transform hover:scale-110"
@@ -475,13 +543,23 @@ export default function Home() {
                     )}
                 </div>
 
-                {/* Create Queue Modal */}
-                <CreateQueueModal
-                    isOpen={showCreateModal}
-                    onClose={() => setShowCreateModal(false)}
-                    onQueueCreated={loadQueues}
-                />
+                {/* Create Queue Modal - Only for authenticated admins */}
+                {isAuthenticated && (
+                    <CreateQueueModal
+                        isOpen={showCreateModal}
+                        onClose={() => setShowCreateModal(false)}
+                        onQueueCreated={loadQueues}
+                    />
+                )}
             </div>
+        </div>
+    );
+}
+
+export default function Home() {
+    return (
+        <AuthWrapper>
+            <Dashboard />
         </AuthWrapper>
     );
 }

@@ -1,5 +1,16 @@
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
+
+// Create authentication context
+const AuthContext = createContext();
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthWrapper');
+    }
+    return context;
+};
 
 const AuthWrapper = ({ children }) => {
     const router = useRouter();
@@ -37,9 +48,8 @@ const AuthWrapper = ({ children }) => {
                 }
             }
 
-            // Not authenticated, redirect to signin
+            // Not authenticated - but always allow access to dashboard
             setIsLoading(false);
-            router.push('/auth/signin');
         };
 
         checkAuth();
@@ -55,18 +65,12 @@ const AuthWrapper = ({ children }) => {
         );
     }
 
-    // Show loading while redirecting
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <p className="mt-4 text-gray-600">Redirecting to login...</p>
-            </div>
-        );
-    }
-
-    // Render children if authenticated, passing user info
-    return children;
+    // Always render children with auth context (no redirect for unauthenticated users)
+    return (
+        <AuthContext.Provider value={{ isAuthenticated, user, setUser, setIsAuthenticated }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export default AuthWrapper;
